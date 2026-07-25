@@ -1,12 +1,8 @@
 import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 // @ts-ignore
 import RustPlus from '@liamcottle/rustplus.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Токен вашего бота rustikcsBot
 const BOT_TOKEN = '8994053679:AAGkB_Jy3dgIJvbBG3kdoKAzDxlXftdblk4';
@@ -16,7 +12,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// Использование __dirname напрямую (теперь без import.meta)
+app.use(express.static(path.join(process.cwd(), 'src', 'public')));
 
 // Вспомогательная функция для подключения к Rust+ серверу
 const executeOnRustPlus = async (credentials: { ip: string, port: number, playerId: string, playerToken: number }, callback: (rustplus: any) => Promise<any>) => {
@@ -66,7 +63,7 @@ app.post('/api/time', async (req, res) => {
   }
 });
 
-// 3. Управление умным устройством (Включить / Выключить Smart Switch)
+// 3. Управление умным устройством
 app.post('/api/device', async (req, res) => {
   try {
     const { ip, port, playerId, playerToken, entityId, turnOn } = req.body;
