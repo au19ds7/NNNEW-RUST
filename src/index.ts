@@ -14,6 +14,13 @@ const bot = new Telegraf(BOT_TOKEN);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Функция для получения чистого домена без слэшей и протоколов
+const getCleanDomain = () => {
+  let domain = process.env.WEB_APP_URL || process.env.RAILWAY_STATIC_URL || 'localhost:3000';
+  domain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  return domain;
+};
+
 const getBaseUrl = (req?: any) => {
   let rawUrl = process.env.WEB_APP_URL || process.env.RAILWAY_STATIC_URL;
   if (!rawUrl && req) {
@@ -35,12 +42,12 @@ app.use(passport.session());
 passport.serializeUser((user: any, done: (err: any, id?: any) => void) => done(null, user));
 passport.deserializeUser((obj: any, done: (err: any, user?: any) => void) => done(null, obj));
 
-// Инициализация Steam Strategy с базовым returnURL сразу
-const initialBaseUrl = process.env.WEB_APP_URL || process.env.RAILWAY_STATIC_URL ? `https://${process.env.WEB_APP_URL || process.env.RAILWAY_STATIC_URL}`.replace(/([^:]\/)\/+/g, "$1") : 'http://localhost:3000';
+const domain = getCleanDomain();
 
+// Инициализация Steam Strategy с корректным URL
 passport.use(new SteamStrategy({
-    returnURL: `${initialBaseUrl.replace(/\/$/, '')}/auth/steam/return`,
-    realm: `${initialBaseUrl.replace(/\/$/, '')}/`,
+    returnURL: `https://${domain}/auth/steam/return`,
+    realm: `https://${domain}/`,
     apiKey: ''
   },
   (identifier: string, profile: any, done: (err: any, user?: any) => void) => {
