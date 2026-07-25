@@ -7,8 +7,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@liamcottle/rustplus.js": "^0.3.3",
-    "dotenv": "^16.4.5",
+    "@liamcottle/rustplus.js": "*",
     "express": "^4.19.2",
     "telegraf": "^4.16.3"
   },
