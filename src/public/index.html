@@ -73,7 +73,7 @@
             margin-top: 8px;
         }
 
-        input {
+        select, input {
             width: 100%;
             padding: 10px 12px;
             box-sizing: border-box;
@@ -86,7 +86,7 @@
             transition: border-color 0.2s;
         }
 
-        input:focus {
+        select:focus, input:focus {
             border-color: var(--button-color);
         }
 
@@ -176,8 +176,8 @@
 </head>
 <body>
     <div class="container">
-        <h2>🛡️ Rust+ Control Panel <span class="badge">PRO</span></h2>
-        <div class="subtitle">Управление электрикой из Telegram</div>
+        <h2>🛡️ Rust+ Control Panel <span class="badge">VIP</span></h2>
+        <div class="subtitle">Автоматическое управление устройствами Rust+</div>
 
         <!-- Блок авторизации Steam -->
         <div class="card" id="auth-card">
@@ -197,21 +197,19 @@
             </div>
         </div>
 
+        <!-- Блок выбора привязанных серверов -->
+        <div class="card">
+            <h3>📡 Привязанные серверы Rust+</h3>
+            <label>Выберите сервер (из Pairing в игре)</label>
+            <select id="serverSelect" onchange="onServerSelect()">
+                <option value="">Сначала войдите через Steam...</option>
+            </select>
+        </div>
+
         <!-- Блок управления электрикой -->
         <div class="card">
             <h3>⚡ Управление электрикой</h3>
-            <label>Параметры подключения (IP : Порт : Токен)</label>
-            <div class="row">
-                <div>
-                    <input type="text" id="ip" placeholder="IP Сервера">
-                </div>
-                <div>
-                    <input type="number" id="port" placeholder="Порт">
-                </div>
-            </div>
-            <input type="number" id="playerToken" placeholder="Player Token" style="margin-top: 8px;">
-
-            <label style="margin-top: 12px;">ID Устройства (Entity ID)</label>
+            <label>ID Устройства (Entity ID реле/лампы)</label>
             <input type="text" id="entityId" placeholder="Например: 123456">
             
             <div class="row">
@@ -231,12 +229,9 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        window.onload = async () => {
-            if(localStorage.getItem('rust_ip')) document.getElementById('ip').value = localStorage.getItem('rust_ip');
-            if(localStorage.getItem('rust_port')) document.getElementById('port').value = localStorage.getItem('rust_port');
-            if(localStorage.getItem('rust_token')) document.getElementById('playerToken').value = localStorage.getItem('rust_token');
-            if(localStorage.getItem('rust_entity')) document.getElementById('entityId').value = localStorage.getItem('rust_entity');
+        let loadedServers = [];
 
+        window.onload = async () => {
             try {
                 const res = await fetch('/api/user');
                 const data = await res.json();
@@ -248,9 +243,34 @@
                     if (data.user.photos && data.user.photos[2]) {
                         document.getElementById('user-avatar').src = data.user.photos[2].value;
                     }
+                    // Загружаем привязанные серверы
+                    loadServers();
                 }
             } catch (e) {
                 console.error(e);
+            }
+        }
+
+        async function loadServers() {
+            try {
+                const res = await fetch('/api/servers');
+                const json = await res.json();
+                const select = document.getElementById('serverSelect');
+                select.innerHTML = '<option value="">-- Выберите сервер --</option>';
+
+                if (json.success && json.servers && json.servers.length > 0) {
+                    loadedServers = json.servers;
+                    loadedServers.forEach((srv, index) => {
+                        const opt = document.createElement('option');
+                        opt.value = index;
+                        opt.innerText = `${srv.name} (${srv.ip}:${srv.port})`;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">Нет привязанных серверов (нажмите Pair в игре)</option>';
+                }
+            } catch (err) {
+                console.error("Ошибка загрузки серверов:", err);
             }
         }
 
@@ -267,24 +287,34 @@
             window.location.href = '/auth/logout';
         }
 
-        function saveCreds() {
-            localStorage.setItem('rust_ip', document.getElementById('ip').value);
-            localStorage.setItem('rust_port', document.getElementById('port').value);
-            localStorage.setItem('rust_token', document.getElementById('playerToken').value);
-            localStorage.setItem('rust_entity', document.getElementById('entityId').value);
+        function onServerSelect() {
+            // При выборе сервера можно сохранять выбранный индекс, если нужно
         }
 
         async function switchDevice(turnOn) {
-            saveCreds();
+            const selectedIndex = document.getElementById('serverSelect').value;
+            if (selectedIndex === "" || !loadedServers[selectedIndex]) {
+                setOut("❌ Выберите сервер из списка привязанных!");
+                return;
+            }
+
+            const server = loadedServers[selectedIndex];
+            const entityId = document.getElementById('entityId').value;
+
+            if (!entityId) {
+                setOut("❌ Введите ID устройства (Entity ID)!");
+                return;
+            }
+
             const bodyData = {
-                ip: document.getElementById('ip').value,
-                port: document.getElementById('port').value,
-                playerToken: document.getElementById('playerToken').value,
-                entityId: document.getElementById('entityId').value,
+                ip: server.ip,
+                port: server.port,
+                playerToken: server.playerToken,
+                entityId: entityId,
                 turnOn
             };
 
-            setOut("⏳ Отправка команды...");
+            setOut("⏳ Отправка команды на сервер...");
             try {
                 const res = await fetch('/api/device', {
                     method: 'POST',
@@ -294,7 +324,7 @@
                 const json = await res.json();
                 setOut(JSON.stringify(json, null, 2));
             } catch (err) {
-                setOut("❌ Ошибка: " + err.message);
+                setOut("❌ Ошибка соединения: " + err.message);
             }
         }
 
