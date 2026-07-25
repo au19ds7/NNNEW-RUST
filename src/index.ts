@@ -14,7 +14,6 @@ const bot = new Telegraf(BOT_TOKEN);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Функция для получения чистого домена без слэшей и протоколов
 const getCleanDomain = () => {
   let domain = process.env.WEB_APP_URL || process.env.RAILWAY_STATIC_URL || 'localhost:3000';
   domain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -44,7 +43,6 @@ passport.deserializeUser((obj: any, done: (err: any, user?: any) => void) => don
 
 const domain = getCleanDomain();
 
-// Инициализация Steam Strategy с вашим API ключом
 passport.use(new SteamStrategy({
     returnURL: `https://${domain}/auth/steam/return`,
     realm: `https://${domain}/`,
@@ -60,7 +58,6 @@ app.use(express.static(path.join(process.cwd(), 'src', 'public')));
 
 app.get('/auth/steam', passport.authenticate('steam', { failureRedirect: '/' }));
 
-// Детальный роутинг с логированием
 app.get('/auth/steam/return',
   (req: any, res: any, next: any) => {
     passport.authenticate('steam', { failureRedirect: '/' }, (err: any, user: any) => {
