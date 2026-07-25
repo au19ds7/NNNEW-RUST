@@ -116,41 +116,6 @@ const executeOnRustPlus = async (credentials: { ip: string, port: number, player
   });
 };
 
-app.post('/api/info', async (req: any, res: any) => {
-  try {
-    const { ip, port, playerToken } = req.body;
-    const user = req.user;
-    
-    if (!user || !user.id) {
-      return res.status(401).json({ success: false, error: 'Требуется авторизация через Steam!' });
-    }
-
-    const playerId = user.id;
-    const data = await executeOnRustPlus({ ip, port: Number(port), playerId, playerToken: Number(playerToken) }, async (rp: any) => {
-      return new Promise((resolve) => rp.getInfo((message: any) => resolve(message)));
-    });
-    res.json({ success: true, data });
-  } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-app.post('/api/time', async (req: any, res: any) => {
-  try {
-    const { ip, port, playerToken } = req.body;
-    const user = req.user;
-    if (!user || !user.id) return res.status(401).json({ success: false, error: 'Требуется авторизация через Steam!' });
-
-    const playerId = user.id;
-    const data = await executeOnRustPlus({ ip, port: Number(port), playerId, playerToken: Number(playerToken) }, async (rp: any) => {
-      return new Promise((resolve) => rp.getTime((message: any) => resolve(message)));
-    });
-    res.json({ success: true, data });
-  } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
 app.post('/api/device', async (req: any, res: any) => {
   try {
     const { ip, port, playerToken, entityId, turnOn } = req.body;
@@ -173,7 +138,7 @@ app.post('/api/device', async (req: any, res: any) => {
 bot.command('start', (ctx) => {
   let webAppUrl = getBaseUrl();
   ctx.reply(
-    '🎮 Привет! Это бот **rustikcsBot**.\n\nНажмите кнопку ниже для входа через Steam и управления Rust+:',
+    '🎮 Привет! Это бот **rustikcsBot**.\n\nНажмите кнопку ниже для управления электрикой Rust+:',
     {
       parse_mode: 'Markdown',
       ...Markup.inlineKeyboard([[Markup.button.webApp('🚀 Открыть Панель Rust+', webAppUrl)]])
