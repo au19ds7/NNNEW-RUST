@@ -35,9 +35,12 @@ app.use(passport.session());
 passport.serializeUser((user: any, done: (err: any, id?: any) => void) => done(null, user));
 passport.deserializeUser((obj: any, done: (err: any, user?: any) => void) => done(null, obj));
 
+// Инициализация Steam Strategy с базовым returnURL сразу
+const initialBaseUrl = process.env.WEB_APP_URL || process.env.RAILWAY_STATIC_URL ? `https://${process.env.WEB_APP_URL || process.env.RAILWAY_STATIC_URL}`.replace(/([^:]\/)\/+/g, "$1") : 'http://localhost:3000';
+
 passport.use(new SteamStrategy({
-    returnURL: '',
-    realm: '',
+    returnURL: `${initialBaseUrl.replace(/\/$/, '')}/auth/steam/return`,
+    realm: `${initialBaseUrl.replace(/\/$/, '')}/`,
     apiKey: ''
   },
   (identifier: string, profile: any, done: (err: any, user?: any) => void) => {
@@ -45,17 +48,6 @@ passport.use(new SteamStrategy({
     return done(null, profile);
   }
 ));
-
-// Динамическое обновление URL через тип any, чтобы TypeScript не ругался
-app.use((req: any, res: any, next: any) => {
-  const baseUrl = getBaseUrl(req);
-  const passportAny = passport as any;
-  if (passportAny._strategies && passportAny._strategies['steam']) {
-    passportAny._strategies['steam']._returnURL = `${baseUrl}/auth/steam/return`;
-    passportAny._strategies['steam']._realm = `${baseUrl}/`;
-  }
-  next();
-});
 
 app.use(express.static(path.join(process.cwd(), 'src', 'public')));
 
