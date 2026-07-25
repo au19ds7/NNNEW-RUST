@@ -3,18 +3,17 @@ import express from 'express';
 import path from 'path';
 import session from 'express-session';
 import passport from 'passport';
+// @ts-ignore
 import SteamStrategy from 'passport-steam';
 // @ts-ignore
 import RustPlus from '@liamcottle/rustplus.js';
 
-// Токен вашего бота rustikcsBot
 const BOT_TOKEN = '8994053679:AAGkB_Jy3dgIJvbBG3kdoKAzDxlXftdblk4';
 
 const bot = new Telegraf(BOT_TOKEN);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Определение базового URL для OpenID и Mini App
 const getBaseUrl = (req?: any) => {
   let rawUrl = process.env.WEB_APP_URL || process.env.RAILWAY_STATIC_URL;
   if (!rawUrl && req) {
@@ -33,59 +32,56 @@ app.use(session({ secret: 'rustplus_super_secret_key', resave: false, saveUninit
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj: any, done) => done(null, obj));
+passport.serializeUser((user: any, done: (err: any, id?: any) => void) => done(null, user));
+passport.deserializeUser((obj: any, done: (err: any, user?: any) => void) => done(null, obj));
 
-// Настройка Steam OpenID Strategy
 passport.use(new SteamStrategy({
-    returnURL: '', // Динамически переопределим ниже или в запросе
+    returnURL: '',
     realm: '',
-    apiKey: '' // Steam API Key не обязателен для базового OpenID, но можно указать если есть
+    apiKey: ''
   },
-  (identifier: string, profile: any, done: any) => {
+  (identifier: string, profile: any, done: (err: any, user?: any) => void) => {
     profile.identifier = identifier;
     return done(null, profile);
   }
 ));
 
-// Динамическая настройка редиректа Steam OpenID под текущий домен Railway
-app.use((req, res, next) => {
+app.use((req: any, res: any, next: any) => {
   const baseUrl = getBaseUrl(req);
   (passport._strategies['steam'] as any)._returnURL = `${baseUrl}/auth/steam/return`;
   (passport._strategies['steam'] as any)._realm = `${baseUrl}/`;
   next();
 });
 
-// Раздача статики
 app.use(express.static(path.join(process.cwd(), 'src', 'public')));
 
-// --- Эндпоинты авторизации через Steam ---
 app.get('/auth/steam', passport.authenticate('steam', { failureRedirect: '/' }));
 
 app.get('/auth/steam/return',
   passport.authenticate('steam', { failureRedirect: '/' }),
-  (req, res) => {
-    // Успешный вход через Steam, перенаправляем обратно в Mini App
+  (req: any, res: any) => {
     res.redirect('/');
   }
 );
 
-// Проверка статуса авторизации текущего пользователя
-app.get('/api/user', (req, res) => {
-  if (req.isAuthenticated() && req.user) {
+app.get('/api/user', (req: any, res: any) => {
+  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     res.json({ authenticated: true, user: req.user });
   } else {
     res.json({ authenticated: false });
   }
 });
 
-app.get('/auth/logout', (req, res) => {
-  req.logout(() => {
+app.get('/auth/logout', (req: any, res: any) => {
+  if (typeof req.logout === 'function') {
+    req.logout(() => {
+      res.redirect('/');
+    });
+  } else {
     res.redirect('/');
-  });
+  }
 });
 
-// --- API для работы с Rust+ ---
 const executeOnRustPlus = async (credentials: { ip: string, port: number, playerId: string, playerToken: number }, callback: (rustplus: any) => Promise<any>) => {
   return new Promise((resolve, reject) => {
     const rustplus = new RustPlus(credentials.ip, credentials.port, credentials.playerId, credentials.playerToken);
@@ -105,19 +101,18 @@ const executeOnRustPlus = async (credentials: { ip: string, port: number, player
   });
 };
 
-app.post('/api/info', async (req, res) => {
+app.post('/api/info', async (req: any, res: any) => {
   try {
     const { ip, port, playerToken } = req.body;
-    const user: any = req.user;
+    const user = req.user;
     
     if (!user || !user.id) {
       return res.status(401).json({ success: false, error: 'Требуется авторизация через Steam!' });
     }
 
-    const playerId = user.id; // SteamID берется автоматически из сессии Steam OpenID!
-
-    const data = await executeOnRustPlus({ ip, port: Number(port), playerId, playerToken: Number(playerToken) }, async (rp) => {
-      return new Promise((res) => rp.getInfo((message: any) => res(message)));
+    const playerId = user.id;
+    const data = await executeOnRustPlus({ ip, port: Number(port), playerId, playerToken: Number(playerToken) }, async (rp: any) => {
+      return new Promise((resolve) => rp.getInfo((message: any) => resolve(message)));
     });
     res.json({ success: true, data });
   } catch (e: any) {
@@ -125,16 +120,15 @@ app.post('/api/info', async (req, res) => {
   }
 });
 
-app.post('/api/time', async (req, res) => {
+app.post('/api/time', async (req: any, res: any) => {
   try {
     const { ip, port, playerToken } = req.body;
-    const user: any = req.user;
+    const user = req.user;
     if (!user || !user.id) return res.status(401).json({ success: false, error: 'Требуется авторизация через Steam!' });
 
     const playerId = user.id;
-
-    const data = await executeOnRustPlus({ ip, port: Number(port), playerId, playerToken: Number(playerToken) }, async (rp) => {
-      return new Promise((res) => rp.getTime((message: any) => res(message)));
+    const data = await executeOnRustPlus({ ip, port: Number(port), playerId, playerToken: Number(playerToken) }, async (rp: any) => {
+      return new Promise((resolve) => rp.getTime((message: any) => resolve(message)));
     });
     res.json({ success: true, data });
   } catch (e: any) {
@@ -142,18 +136,17 @@ app.post('/api/time', async (req, res) => {
   }
 });
 
-app.post('/api/device', async (req, res) => {
+app.post('/api/device', async (req: any, res: any) => {
   try {
     const { ip, port, playerToken, entityId, turnOn } = req.body;
-    const user: any = req.user;
+    const user = req.user;
     if (!user || !user.id) return res.status(401).json({ success: false, error: 'Требуется авторизация через Steam!' });
 
     const playerId = user.id;
-
-    const data = await executeOnRustPlus({ ip, port: Number(port), playerId, playerToken: Number(playerToken) }, async (rp) => {
-      return new Promise((res) => {
-        if (turnOn) rp.turnSmartSwitchOn(entityId, (message: any) => res(message));
-        else rp.turnSmartSwitchOff(entityId, (message: any) => res(message));
+    const data = await executeOnRustPlus({ ip, port: Number(port), playerId, playerToken: Number(playerToken) }, async (rp: any) => {
+      return new Promise((resolve) => {
+        if (turnOn) rp.turnSmartSwitchOn(entityId, (message: any) => resolve(message));
+        else rp.turnSmartSwitchOff(entityId, (message: any) => resolve(message));
       });
     });
     res.json({ success: true, data });
@@ -162,7 +155,6 @@ app.post('/api/device', async (req, res) => {
   }
 });
 
-// Telegram команда старта
 bot.command('start', (ctx) => {
   let webAppUrl = getBaseUrl();
   ctx.reply(
