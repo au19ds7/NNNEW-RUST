@@ -14,9 +14,6 @@ const bot = new Telegraf(BOT_TOKEN);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Временное хранилище привязанных серверов пользователей (в продакшене лучше использовать БД вроде MongoDB или PostgreSQL)
-const userServersMap = new Map<string, Array<{ip: string, port: number, playerToken: number, name: string}>>();
-
 const getCleanDomain = () => {
   let domain = process.env.WEB_APP_URL || process.env.RAILWAY_STATIC_URL || 'localhost:3000';
   domain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -90,14 +87,22 @@ app.get('/api/user', (req: any, res: any) => {
   }
 });
 
-// Эндпоинт для получения автоматически привязанных серверов пользователя
+// Эндпоинт со списком серверов (впишите сюда IP, порт и токен вашего реального сервера для проверки)
 app.get('/api/servers', (req: any, res: any) => {
   if (!req.isAuthenticated || !req.isAuthenticated() || !req.user) {
     return res.status(401).json({ success: false, error: 'Требуется авторизация!' });
   }
-  const steamId = req.user.id;
-  const servers = userServersMap.get(steamId) || [];
-  res.json({ success: true, servers });
+
+  const myServers = [
+    {
+      name: "Мой рабочий Rust сервер",
+      ip: "192.168.1.100",   // Замените на реальный IP вашего сервера
+      port: 28082,          // Замените на реальный App порт
+      playerToken: 12345678 // Замените на ваш Player Token
+    }
+  ];
+
+  res.json({ success: true, servers: myServers });
 });
 
 app.get('/auth/logout', (req: any, res: any) => {
@@ -147,20 +152,6 @@ app.post('/api/device', async (req: any, res: any) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
-
-// Симуляция получения пуша сопряжения от Facepunch (сюда будет прилетать вызов из FCM-слушателя)
-// Вы можете вызывать этот метод из вашего фонового обработчика уведомлений при нажатии "Pair with Server" в игре
-export function registerServerPairing(steamId: string, serverData: {ip: string, port: number, playerToken: number, name: string}) {
-  let list = userServersMap.get(steamId) || [];
-  // Проверяем, нет ли уже такого сервера, и добавляем
-  const existingIndex = list.findIndex(s => s.ip === serverData.ip && s.port === serverData.port);
-  if (existingIndex >= 0) {
-    list[existingIndex] = serverData;
-  } else {
-    list.push(serverData);
-  }
-  userServersMap.set(steamId, list);
-}
 
 bot.command('start', (ctx) => {
   let webAppUrl = getBaseUrl();
