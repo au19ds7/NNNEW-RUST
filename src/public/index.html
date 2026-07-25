@@ -273,11 +273,10 @@
 
         function loginSteam() {
             const authUrl = window.location.origin + '/auth/steam';
-            // Открывает встроенное окно Telegram Mini App для авторизации
-            if (tg && tg.openLink) {
-                tg.openLink(authUrl);
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                window.Telegram.WebApp.openLink(authUrl);
             } else {
-                window.location.href = authUrl;
+                window.open(authUrl, '_blank');
             }
         }
 
@@ -326,7 +325,7 @@
         function switchDevice(turnOn) {
             const data = {
                 ...getCreds(),
--               entityId: document.getElementById('entityId').value,
+                entityId: document.getElementById('entityId').value,
                 turnOn
             };
             sendApi('/api/device', data);
