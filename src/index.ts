@@ -46,10 +46,14 @@ passport.use(new SteamStrategy({
   }
 ));
 
+// Динамическое обновление URL через тип any, чтобы TypeScript не ругался
 app.use((req: any, res: any, next: any) => {
   const baseUrl = getBaseUrl(req);
-  (passport._strategies['steam'] as any)._returnURL = `${baseUrl}/auth/steam/return`;
-  (passport._strategies['steam'] as any)._realm = `${baseUrl}/`;
+  const passportAny = passport as any;
+  if (passportAny._strategies && passportAny._strategies['steam']) {
+    passportAny._strategies['steam']._returnURL = `${baseUrl}/auth/steam/return`;
+    passportAny._strategies['steam']._realm = `${baseUrl}/`;
+  }
   next();
 });
 
