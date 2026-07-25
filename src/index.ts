@@ -44,11 +44,11 @@ passport.deserializeUser((obj: any, done: (err: any, user?: any) => void) => don
 
 const domain = getCleanDomain();
 
-// Инициализация Steam Strategy
+// Инициализация Steam Strategy с вашим API ключом
 passport.use(new SteamStrategy({
     returnURL: `https://${domain}/auth/steam/return`,
     realm: `https://${domain}/`,
-    apiKey: ''
+    apiKey: '2C4C7842FA8C4EAA3E5004D73649A90A'
   },
   (identifier: string, profile: any, done: (err: any, user?: any) => void) => {
     profile.identifier = identifier;
@@ -60,7 +60,7 @@ app.use(express.static(path.join(process.cwd(), 'src', 'public')));
 
 app.get('/auth/steam', passport.authenticate('steam', { failureRedirect: '/' }));
 
-// Исправленный роутиингл с детальным логированием ошибок
+// Детальный роутинг с логированием
 app.get('/auth/steam/return',
   (req: any, res: any, next: any) => {
     passport.authenticate('steam', { failureRedirect: '/' }, (err: any, user: any) => {
