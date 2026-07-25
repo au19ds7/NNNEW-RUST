@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rust+ Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: sans-serif; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); padding: 15px; margin: 0; }
+        input, button { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc; }
+        button { background: var(--tg-theme-button-color, #2481cc); color: var(--tg-theme-button-text-color, #fff); border: none; font-weight: bold; cursor: pointer; }
+        .card { background: rgba(128,128,128,0.1); padding: 10px; border-radius: 8px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>Учетные данные Rust+</h3>
+        <input type="text" id="ip" placeholder="IP Сервера">
+        <input type="number" id="port" placeholder="App Port (например 28082)">
+        <input type="text" id="playerId" placeholder="SteamID / Player ID">
+        <input type="number" id="playerToken" placeholder="Player Token (число)">
+
+        <hr>
+        <button onclick="getServerInfo()">Инфо о сервере</button>
+        <button onclick="getServerTime()">Время в игре</button>
+
+        <div class="card">
+            <h4>Управление светом / реле</h4>
+            <input type="text" id="entityId" placeholder="ID Элемента (Entity ID)">
+            <button onclick="switchDevice(true)">Включить</button>
+            <button onclick="switchDevice(false)">Выключить</button>
+        </div>
+
+        <div id="output" class="card" style="white-space: pre-wrap; font-size: 12px;"></div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        function getCreds() {
+            return {
+                ip: document.getElementById('ip').value,
+                port: document.getElementById('port').value,
+                playerId: document.getElementById('playerId').value,
+                playerToken: document.getElementById('playerToken').value
+            };
+        }
+
+        async function getServerInfo() {
+            setOut("Загрузка инфо...");
+            const res = await fetch('/api/info', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(getCreds()) });
+            const json = await res.json();
+            setOut(JSON.stringify(json, null, 2));
+        }
+
+        async function getServerTime() {
+            setOut("Загрузка времени...");
+            const res = await fetch('/api/time', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(getCreds()) });
+            const json = await res.json();
+            setOut(JSON.stringify(json, null, 2));
+        }
+
+        async function switchDevice(turnOn) {
+            const data = { ...getCreds(), entityId: document.getElementById('entityId').value, turnOn };
+            setOut("Отправка команды...");
+            const res = await fetch('/api/device', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            const json = await res.json();
+            setOut(JSON.stringify(json, null, 2));
+        }
+
+        function setOut(text) {
+            document.getElementById('output').innerText = text;
+        }
+    </script>
+</body>
+</html>
