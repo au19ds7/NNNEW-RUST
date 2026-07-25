@@ -44,7 +44,7 @@ passport.deserializeUser((obj: any, done: (err: any, user?: any) => void) => don
 
 const domain = getCleanDomain();
 
-// Инициализация Steam Strategy с корректным URL
+// Инициализация Steam Strategy
 passport.use(new SteamStrategy({
     returnURL: `https://${domain}/auth/steam/return`,
     realm: `https://${domain}/`,
@@ -60,10 +60,25 @@ app.use(express.static(path.join(process.cwd(), 'src', 'public')));
 
 app.get('/auth/steam', passport.authenticate('steam', { failureRedirect: '/' }));
 
+// Исправленный роутиингл с детальным логированием ошибок
 app.get('/auth/steam/return',
-  passport.authenticate('steam', { failureRedirect: '/' }),
-  (req: any, res: any) => {
-    res.redirect('/');
+  (req: any, res: any, next: any) => {
+    passport.authenticate('steam', { failureRedirect: '/' }, (err: any, user: any) => {
+      if (err) {
+        console.error('STEAM AUTH ERROR:', err);
+        return res.status(500).send('Auth error: ' + err.message);
+      }
+      if (!user) {
+        return res.redirect('/');
+      }
+      req.logIn(user, (loginErr: any) => {
+        if (loginErr) {
+          console.error('LOGIN SESSION ERROR:', loginErr);
+          return res.status(500).send('Login error: ' + loginErr.message);
+        }
+        return res.redirect('/');
+      });
+    })(req, res, next);
   }
 );
 
